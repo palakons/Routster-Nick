@@ -37,7 +37,7 @@ function buttonClick() {
 function whatCity() {
 
     var inputId = 'sourceText2';
-    var url = '/whatCity';
+    var url = '/labels';
     function callback(data, textStatus, jqXHR) {
         console.log(data);
     }

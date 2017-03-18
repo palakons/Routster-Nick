@@ -216,6 +216,7 @@ if (cluster.isMaster) {
                 rResult = { 'M': rResult };
                 console.log('after process');
                 console.log(rResult);
+                res.status(200).json(data);
                 //convert to feature
             }
         });
