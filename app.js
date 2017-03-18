@@ -5711,8 +5711,8 @@ function nearestAP(lat, long) {
     var minAP = {};
     for (var i in apList) {
         var d = getDistanceFromLatLonInKm(lat,long,apList[i].lat,apList[i].long);
-        console.log(apList[i].code,d,apList[i].lat,apList[i].long);
         if (d < minD) {
+        console.log(apList[i].code,d,lat,long,apList[i].lat,apList[i].long);
             minD = d;
             minAP = apList[i];
         }
