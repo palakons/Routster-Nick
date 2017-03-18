@@ -7,7 +7,7 @@ var extend = require('extend');
 var URL = require('url').URL;
 
 //var s3Bucket = process.env.TRAINING_IMAGE_BUCKET || 'test-rekognition-nick';
-var s3Bucket = process.env.TRAINING_IMAGE_BUCKET || 'rekognition-routster';
+var s3Bucket = process.env.TRAINING_IMAGE_BUCKET || 'igdara';
 //var modelId = 'ml-JXDMJuy8lgk';
 var modelId = 'ml-VSdUx0D5JkG';
 var MLendPoint = 'https://realtime.machinelearning.us-east-1.amazonaws.com/';
@@ -23,6 +23,23 @@ function makeS3Key(suffix, contentType) {
 
     return Date.now() + (suffix == '' ? '' : '-' + suffix) + '.' + contentType.substring(contentType.lastIndexOf('/') + 1, contentType.length);
 
+}
+function matchScore(itemList, myImg, thresh, n) {
+    for (var i in itemList) {
+        var score = 0;
+        for (var j in itemList[i].rekObj.M.Labels.L) {
+            if (myImg[itemList[i].rekObj.M.Labels.L[j].M.Name.S] != undefined &&
+                parseFloat(itemList[i].rekObj.M.Labels.L[j].M.Confidence.N) > thresh &&
+                myImg[itemList[i].rekObj.M.Labels.L[j].M.Name.S] > thresh) {
+                score += 1;
+            }
+        }
+        itemList[i].score = score;
+    }
+    itemList.sort(function (a, b) {
+        return b.score - a.score;
+    });
+    return itemList.slice(0,n);
 }
 function getbase64FromUrl(urlX, callback) {
     //var url = 'https://nodejs.org/static/images/logo.svg',
@@ -101,7 +118,7 @@ if (cluster.isMaster) {
     var ddb = new AWS.DynamoDB();
 
     //var ddbTable = process.env.TRAINING_IMAGE_TABLE || 'training-city-image';
-    var ddbTable = process.env.TRAINING_IMAGE_TABLE || 'training-city-image-routster';
+    var ddbTable = process.env.TRAINING_IMAGE_TABLE || 'igdara';
     var app = express();
 
     app.set('view engine', 'ejs');
@@ -182,6 +199,8 @@ if (cluster.isMaster) {
         });
     });
 
+
+
     app.post('/labels', function (req, res) {
         //recieve base64
         var base64Data = req.body.img;
@@ -228,25 +247,6 @@ if (cluster.isMaster) {
             theme: process.env.THEME || 'flatly',
             flask_debug: process.env.FLASK_DEBUG || 'false'
         });
-
-        /*var s3 = new AWS.S3();
-        var contentType = 'text/csv';
-        var s3Key = 'MLData/' + makeS3Key('', contentType);
-        console.log('training data key ' + s3Key);
-
-        var params = {
-            Bucket: s3Bucket, 
-            Key: s3Key, 
-            Body: 'a,b,c\n"1","2","3"',
-            ContentType: contentType
-        };
-        s3.putObject(params, function (err, data) {
-            if (err) {
-                console.log('put error',err, err.stack); // an error occurred
-            } else {            // successful response
-                console.log('push done',data);
-            }
-        });*/
     });
     app.get('/mlData', function (req, res) {
 
@@ -378,11 +378,303 @@ if (cluster.isMaster) {
         }
     });
 
+    app.get('/igList', function (req, res) {
+
+        var N = req.query.N || 20;
+        var thresh = req.query.thresh;
+        var myurl = req.query.url;
+        console.log('get N,th: ', N, thresh);
+        var params = {
+            TableName: ddbTable
+        };
+
+        console.log("Scanning table.");
+        var wholeTable = {
+            Count: 0,
+            Items: [],
+            ScannedCount: 0
+        };
+
+        ///////------
+        ddb.scan(params, onScan);
+        console.log('1', myurl);
+        function onScan(err, data) {
+            if (err) {
+                console.error("Unable to scan the table. Error JSON:", JSON.stringify(err, null, 2));
+            } else {
+                // print all the movies
+                console.log("Scan succeeded.");
+                //console.log(JSON.stringify(data));
+                wholeTable = {
+                    Count: wholeTable.Count + data.Count,
+                    Items: wholeTable.Items.concat(data.Items),
+                    ScannedCount: wholeTable.ScannedCount + data.ScannedCount
+                }
+                console.log('2', myurl);
+
+                // continue scanning if we have more movies, because
+                // scan can retrieve a maximum of 1MB of data
+                if (typeof data.LastEvaluatedKey != "undefined") {
+                    console.log("Scanning for more...");
+                    params.ExclusiveStartKey = data.LastEvaluatedKey;
+                    ddb.scan(params, onScan);
+                } else {
+                    console.log("Scan done. " + wholeTable.Count + ', ' + wholeTable.Items.length + " items");
+
+                    //poll all tag
+                    //count each tag
+                    //make reverse index
+                    var labels = {};
+                    var mlTable = [];
+                    wt = wholeTable;
+                    for (var i in wt.Items) {
+                        if (!mlTable[wt.Items[i].url.S])
+                            mlTable[wt.Items[i].url.S] = [];
+                        for (var j in wt.Items[i].rekObj.M.Labels.L) {
+                            if (labels[wt.Items[i].rekObj.M.Labels.L[j].M.Name.S] == undefined) {
+                                labels[wt.Items[i].rekObj.M.Labels.L[j].M.Name.S] = 1;
+                            } else {
+                                labels[wt.Items[i].rekObj.M.Labels.L[j].M.Name.S]++;
+                            }
+                            mlTable[wt.Items[i].url.S][wt.Items[i].rekObj.M.Labels.L[j].M.Name.S] = parseFloat(wt.Items[i].rekObj.M.Labels.L[j].M.Confidence.N);
+                        }
+                    }
+                    var sortable = []
+                    for (var i in labels) {
+                        sortable.push([i, labels[i]]);
+                    }
+                    sortable.sort(function (a, b) {
+                        return b[1] - a[1];
+                    });
+
+                    //pick Max N 
+                    var goodFeature = sortable.slice(0, N)
+
+                    //make sortable
+                    var completeTable = [];
+                    //var urls = [];
+                    var cityImages = [];
+                    var features = [];
+                    for (var i in wt.Items) {
+                        if (!completeTable[i])
+                            completeTable[i] = [];
+                        for (var j in goodFeature) {
+                            completeTable[i][j] = mlTable[wt.Items[i].url.S][goodFeature[j][0]] || 0.;
+                            if (thresh) {
+                                completeTable[i][j] = completeTable[i][j] > thresh ? 1 : 0;
+                            }
+                            if (i == 0) {
+                                features[j] = goodFeature[j][0];
+                            }
+                        }
+                        //urls[i] = wt.Items[i].url.S;
+                        cityImages[i] = wt.Items[i];
+                    }
+                    //res.status(200).json(cityImages);
+
+                    ///////----- get my url
+                    console.log('3', myurl);
+
+                    getbase64FromUrl({ 'S': myurl }, function (contentType, urlHeader, base64Data) {
+
+                        //rekognition
+                        var params = {
+                            Image: {
+                                /*S3Object: {
+                                    Bucket: s3Bucket,
+                                    Name: '1489721804780'
+                                }*/
+                                Bytes: new Buffer(base64Data, 'base64')//no headers
+                            },
+                            MaxLabels: 999,
+                            MinConfidence: 0
+                        };
+                        var rekognition = new AWS.Rekognition();
+                        rekognition.detectLabels(params, function (err, data) {
+                            if (err) console.log(err, err.stack); // an error occurred
+                            else {           // successful response
+                                console.log(data);
+                                var rResult = data;
+                                var reverse = {}
+                                rResult.OrientationCorrection = { 'S': rResult.OrientationCorrection };
+                                for (var jj in rResult.Labels) {
+                                    reverse[rResult.Labels[jj].Name] = rResult.Labels[jj].Confidence;
+                                    rResult.Labels[jj].Name = { 'S': rResult.Labels[jj].Name };
+                                    rResult.Labels[jj].Confidence = { 'N': rResult.Labels[jj].Confidence.toString() };
+                                    rResult.Labels[jj] = { 'M': { 'Name': rResult.Labels[jj].Name, 'Confidence': rResult.Labels[jj].Confidence } };
+                                }
+                                rResult.Labels = { 'L': rResult.Labels };
+                                rResult = { 'M': rResult };
+
+                                //reverse
+                                console.log('done');
+                                console.log(JSON.stringify(cityImages));
+                                console.log(reverse);
+                                res.status(200).json(matchScore(cityImages, reverse, 70, 5));
+
+                            }
+                        });
+
+                    });
+                }
+            }
+        }
+    });
+    app.post('/putIG', function (req, res) {
+
+        var items = req.body.data;
+        for (var i in items) {
+            console.log(new Date().toString());
+            console.log(items[i]);
+            var toPut = {};
+            toPut.created = { 'S': items[i].caption.created_time };
+            toPut.name = { 'S': items[i].caption.from.full_name };
+            toPut.url = { 'S': items[i].images.standard_resolution.url };
+            toPut.location = { 'S': items[i].location.name };
+
+
+            //v.40: check file exists
+            getbase64FromUrl(toPut.url, function (contentType, urlHeader, base64Data) {
+                i = this.i;
+                if (base64Data.length == 0) {
+                    console.log('file not found: ' + items[i].images.standard_resolution.url);
+                } else {
+                    console.log('file exists: ' + items[i].images.standard_resolution.url);
+
+                    console.log('table ' + ddbTable);
+                    var params = {
+                        'TableName': ddbTable,
+                        'Item': toPut,
+                        //v.39: make sure no duplicate records
+                        'Expected': {
+                            'url': { 'Exists': false }
+                        }
+                    };
+                    //console.log(params);
+                    ddb.putItem(
+                        params
+                        , function (err, data) {
+                            i = this.i;
+                            contentType = this.contentType;
+                            base64Data = this.base64Data;
+                            if (err) {
+                                var returnStatus = 500;
+
+                                if (err.code === 'ConditionalCheckFailedException') {
+                                    returnStatus = 409;
+                                }
+                                console.log('DDB Error: ' + err);
+                                console.log(items[i]);
+                            } else {
+
+                                //put in S3 bucket
+                                //var s3 = new AWS.S3({ region: 'us-east-1' });
+                                var s3 = new AWS.S3();
+                                //var s3Key = Date.now() + (items[i].url.S.lastIndexOf('.') - items[i].url.S.length >= -5 ? items[i].url.S.substring(items[i].url.S.lastIndexOf('.'), items[i].url.S.length) : '');
+                                var s3Key = 'igdara/' + makeS3Key('', contentType);
+                                console.log('fname ' + s3Key);
+                                console.log('type ' + contentType);
+
+                                var params = {
+                                    Bucket: s3Bucket, /* required */
+                                    Key: s3Key, /* required */
+                                    Body: new Buffer(base64Data, 'base64'),
+                                    ContentEncoding: 'base64',
+                                    ContentType: contentType
+                                };
+                                s3.putObject(params, function (err, data) {
+                                    i = this.i;
+                                    s3Key = this.s3Key;
+                                    if (err) {
+                                        console.log(err, err.stack); // an error occurred
+                                    } else {            // successful response
+                                        console.log(data);
+                                        var params = {
+                                            TableName: ddbTable,
+                                            Key: {
+                                                "url": { 'S': items[i].images.standard_resolution.url }
+                                            },
+                                            UpdateExpression: "SET s3Key=:k ",
+                                            ExpressionAttributeValues: {
+                                                ":k": { 'S': s3Key }
+                                            }/*,
+                                        ReturnValues: "UPDATED_NEW"*/
+                                        };
+
+                                        console.log("Updating the item...", params);
+                                        ddb.updateItem(params, function (err, data) {
+                                            if (err) {
+                                                console.error("Unable to update item. Error JSON:", JSON.stringify(err, null, 2));
+                                            } else {
+                                                console.log("UpdateItem s3key succeeded:", JSON.stringify(data, null, 2));
+                                            }
+                                        });
+                                    }
+                                }.bind({ s3Key: s3Key, i: i }));
+
+
+                                //rekognition
+                                var params = {
+                                    Image: {
+                                        /*S3Object: {
+                                            Bucket: s3Bucket,
+                                            Name: '1489721804780'
+                                        }*/
+                                        Bytes: new Buffer(base64Data, 'base64')
+                                    },
+                                    MaxLabels: 999,
+                                    MinConfidence: 0
+                                };
+                                //console.log(JSON.stringify(params));
+                                var rekognition = new AWS.Rekognition();
+                                rekognition.detectLabels(params, function (err, data) {
+                                    i = this.i;
+                                    if (err) console.log(err, err.stack); // an error occurred
+                                    else {           // successful response
+                                        console.log(data);
+                                        var rResult = data;
+                                        rResult.OrientationCorrection = { 'S': rResult.OrientationCorrection };
+                                        for (var jj in rResult.Labels) {
+                                            rResult.Labels[jj].Name = { 'S': rResult.Labels[jj].Name };
+                                            rResult.Labels[jj].Confidence = { 'N': rResult.Labels[jj].Confidence.toString() };
+                                            rResult.Labels[jj] = { 'M': { 'Name': rResult.Labels[jj].Name, 'Confidence': rResult.Labels[jj].Confidence } };
+                                        }
+                                        rResult.Labels = { 'L': rResult.Labels };
+                                        rResult = { 'M': rResult };
+                                        console.log('after process');
+                                        console.log(rResult);
+                                        // Update the item, for rekognition
+                                        var params = {
+                                            TableName: ddbTable,
+                                            Key: {
+                                                "url": { 'S': items[i].images.standard_resolution.url }
+                                            },
+                                            UpdateExpression: "SET rekObj=:r ",
+                                            ExpressionAttributeValues: {
+                                                ":r": rResult
+                                            }
+                                        };
+
+                                        console.log("Updating the item...", params);
+                                        ddb.updateItem(params, function (err, data) {
+                                            if (err) {
+                                                console.error("Unable to update item. Error JSON:", JSON.stringify(err, null, 2));
+                                            } else {
+                                                console.log("UpdateItem rekObjsucceeded:", JSON.stringify(data, null, 2));
+                                            }
+                                        });
+                                    }
+                                }.bind({ i: i }));
+                            }
+                        }.bind({ i: i, base64Data: base64Data, contentType: contentType }));
+                }
+            }.bind({ i: i }));
+        }
+        res.status(200).json({ 'status': 'successful' });
+    });
+
     app.post('/putImage', function (req, res) {
 
-        //console.log('hihi use proper parser config');
-        //console.log(JSON.stringify(req.body));
-        //res.json(req.body);
         var items = req.body.images;
 
         for (var i in items) {
