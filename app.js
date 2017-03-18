@@ -4056,10 +4056,10 @@ function nearestAP(lat, long) {
     var minAP = {};
     for (var i in apList) {
         var R = 6371e3; // metres
-        var φ1 = apList[i].lat.toRadians();
-        var φ2 = lat.toRadians();
-        var Δφ = (lat - apList[i].lat).toRadians();
-        var Δλ = (long - apList[i].long).toRadians();
+        var φ1 = toRad(apList[i].lat);
+        var φ2 = toRad(lat);
+        var Δφ = toRad((lat - apList[i].lat));
+        var Δλ = toRad((long - apList[i].long));
 
         var a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
             Math.cos(φ1) * Math.cos(φ2) *
@@ -4073,6 +4073,9 @@ function nearestAP(lat, long) {
         }
     }
     return minAP;
+}
+function toRad(deg){
+    return deg * Math.PI / 180;
 }
 function getbase64FromUrl(urlX, callback) {
     //var url = 'https://nodejs.org/static/images/logo.svg',
