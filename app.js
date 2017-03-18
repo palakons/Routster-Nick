@@ -4585,7 +4585,7 @@ if (cluster.isMaster) {
                             'url': { 'Exists': false }
                         }
                     };
-                    //console.log(params);
+                    console.log(params);
                     ddb.putItem(
                         params
                         , function (err, data) {
