@@ -39,7 +39,7 @@ function matchScore(itemList, myImg, thresh, n) {
         }
         console.log(itemList[i]);
         itemList[i].score = score;
-        //itemList[i].airport = nearestAP(lat, long);
+        itemList[i].airport = nearestAP(parseFloat(itemList[i].lat.N), parseFloat(itemList[i].long.N));
         itemList[i].rekObj.M.Labels.L=itemList[i].rekObj.M.Labels.L.slice(0, score);
     }
     itemList.sort(function (a, b) {
