@@ -523,6 +523,7 @@ if (cluster.isMaster) {
     app.post('/putIG', function (req, res) {
 
         var items = req.body.data;
+            console.log(req.body);
         for (var i in items) {
             console.log(new Date().toString());
             console.log(items[i]);
