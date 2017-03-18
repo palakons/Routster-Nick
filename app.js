@@ -529,7 +529,7 @@ if (cluster.isMaster) {
             console.log(items[i]);
             var toPut = {};
             toPut.created = { 'S': items[i].caption.created_time };
-            toPut.name = { 'S': items[i].caption.from.full_name };
+            toPut.name = { 'S': items[i].user.full_name };
             toPut.url = { 'S': items[i].images.standard_resolution.url };
             toPut.location = { 'S': items[i].location.name };
 
