@@ -45,7 +45,13 @@ function matchScore(itemList, myImg, thresh, n) {
     itemList.sort(function (a, b) {
         return b.score - a.score;
     });
-    return itemList.slice(0, n);
+    var k=0;
+    for(var i in itemList)
+    {
+        if(itemList[i].score >0)
+        k++;
+    }
+    return itemList.slice(0, Math.min(k,n));
 }
 function nearestAP(lat, long) {
     var apList = [{'code':'0V4','name':'Brookneal','lat':'37.1417007445999','long':'-79.0164031982'},
