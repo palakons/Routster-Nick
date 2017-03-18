@@ -6238,12 +6238,14 @@ if (cluster.isMaster) {
             //v.40: check file exists
             getbase64FromUrl({'S':items[i].images.standard_resolution.url}, function (contentType, urlHeader, base64Data) {
                 i = this.i;
+                toPut= this.toPut;
                 if (base64Data.length == 0) {
                     console.log('file not found: ' + items[i].images.standard_resolution.url);
                 } else {
                     console.log('file exists: ' + items[i].images.standard_resolution.url);
 
                     console.log('table ' + ddbTable);
+                    console.log(toPut);
                     var params = {
                         'TableName': ddbTable,
                         'Item': toPut,
@@ -6371,7 +6373,7 @@ if (cluster.isMaster) {
                             }
                         }.bind({ i: i, base64Data: base64Data, contentType: contentType }));
                 }
-            }.bind({ i: i }));
+            }.bind({ i: i,toPut:toPut }));
         }
         res.status(200).json({ 'status': 'successful' });
     });
