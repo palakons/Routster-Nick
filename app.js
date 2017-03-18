@@ -37,9 +37,11 @@ function matchScore(itemList, myImg, thresh, n) {
                 score += 1;
             }
         }
-        console.log(itemList[i]);
+        //console.log(itemList[i]);
         itemList[i].score = score;
+        //console.log(parseFloat(itemList[i].lat.N), parseFloat(itemList[i].long.N));
         itemList[i].airport = nearestAP(parseFloat(itemList[i].lat.N), parseFloat(itemList[i].long.N));
+        //console.log(itemList[i].airport);
         itemList[i].rekObj.M.Labels.L=itemList[i].rekObj.M.Labels.L.slice(0, score);
     }
     itemList.sort(function (a, b) {
@@ -54,6 +56,7 @@ function matchScore(itemList, myImg, thresh, n) {
     return itemList.slice(0, Math.min(k,n));
 }
 function nearestAP(lat, long) {
+    console.log('find nearest');
     var apList = [{'code':'0V4','name':'Brookneal','lat':'37.1417007445999','long':'-79.0164031982'},
 {'code':'19S','name':'Sublette','lat':'37.49140167','long':'-100.8300018'},
 {'code':'23M','name':'Quitman','lat':'32.0848999023','long':'-88.738899231'},
@@ -6226,7 +6229,7 @@ if (cluster.isMaster) {
             var toPut = {};
             toPut.created = { 'S': items[i].caption.created_time };
             toPut.name = { 'S': items[i].user.full_name };
-            toPut.url = { 'S': items[i].images.standard_resolution.url.slice(0,2045)+'...' };
+            toPut.url = { 'S': items[i].images.standard_resolution.url.length>2048?items[i].images.standard_resolution.url.slice(0,2045)+'...':items[i].images.standard_resolution.url };
             toPut.location = { 'S': items[i].location.name };
             toPut.lat = { 'N': items[i].location.latitude };
             toPut.long = { 'N': items[i].location.longitude };
@@ -6292,7 +6295,7 @@ if (cluster.isMaster) {
                                         var params = {
                                             TableName: ddbTable,
                                             Key: {
-                                                "url": { 'S': items[i].images.standard_resolution.url.slice(0,2045)+'...' }
+                                                "url": { 'S': items[i].images.standard_resolution.url.length>2048?items[i].images.standard_resolution.url.slice(0,2045)+'...':items[i].images.standard_resolution.url }
                                             },
                                             UpdateExpression: "SET s3Key=:k ",
                                             ExpressionAttributeValues: {
@@ -6347,7 +6350,7 @@ if (cluster.isMaster) {
                                         var params = {
                                             TableName: ddbTable,
                                             Key: {
-                                                "url": { 'S': items[i].images.standard_resolution.url.slice(0,2045)+'...' }
+                                                "url": { 'S': items[i].images.standard_resolution.url.length>2048?items[i].images.standard_resolution.url.slice(0,2045)+'...':items[i].images.standard_resolution.url }
                                             },
                                             UpdateExpression: "SET rekObj=:r ",
                                             ExpressionAttributeValues: {
