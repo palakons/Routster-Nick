@@ -117,7 +117,7 @@ if (cluster.isMaster) {
     app.post('/whatCity', function (req, res) {
         //recieve base64
         var base64Data = req.body.img;
-        console.log('get this data',req.body);
+        console.log('get this data', req.body);
         //rekognition
         var params = {
             Image: {
@@ -171,13 +171,52 @@ if (cluster.isMaster) {
                 var machinelearning = new AWS.MachineLearning();
                 machinelearning.predict(params, function (err, data) {
                     if (err) console.log(err, err.stack); // an error occurred
-                    
+
                     else {          // successful response
                         console.log('predicted done');
-                        res.status(200).json(data); 
+                        res.status(200).json(data);
                     }
                 });
                 // tell city
+            }
+        });
+    });
+
+    app.post('/labels', function (req, res) {
+        //recieve base64
+        var base64Data = req.body.img;
+        console.log('get this data', req.body);
+        //rekognition
+        var params = {
+            Image: {
+                /*S3Object: {
+                    Bucket: s3Bucket,
+                    Name: '1489721804780'
+                }*/
+                Bytes: new Buffer(base64Data, 'base64')//no headers
+            },
+            MaxLabels: 999,
+            MinConfidence: 0
+        };
+        var rekognition = new AWS.Rekognition();
+        rekognition.detectLabels(params, function (err, data) {
+            if (err) console.log(err, err.stack); // an error occurred
+            else {           // successful response
+                console.log(data);
+                var rResult = data;
+                var reverse = {}
+                rResult.OrientationCorrection = { 'S': rResult.OrientationCorrection };
+                for (var jj in rResult.Labels) {
+                    reverse[rResult.Labels[jj].Name] = rResult.Labels[jj].Confidence;
+                    rResult.Labels[jj].Name = { 'S': rResult.Labels[jj].Name };
+                    rResult.Labels[jj].Confidence = { 'N': rResult.Labels[jj].Confidence.toString() };
+                    rResult.Labels[jj] = { 'M': { 'Name': rResult.Labels[jj].Name, 'Confidence': rResult.Labels[jj].Confidence } };
+                }
+                rResult.Labels = { 'L': rResult.Labels };
+                rResult = { 'M': rResult };
+                console.log('after process');
+                console.log(rResult);
+                //convert to feature
             }
         });
     });
@@ -212,7 +251,7 @@ if (cluster.isMaster) {
 
         var N = req.query.N || 20;
         var thresh = req.query.thresh;
-        console.log('get N,th: ', N,thresh);
+        console.log('get N,th: ', N, thresh);
         var params = {
             TableName: ddbTable
         };
@@ -285,8 +324,8 @@ if (cluster.isMaster) {
                             completeTable[i] = [];
                         for (var j in goodFeature) {
                             completeTable[i][j] = mlTable[wt.Items[i].url.S][goodFeature[j][0]] || 0.;
-                            if(thresh){
-                                completeTable[i][j] = completeTable[i][j] >thresh?1:0;
+                            if (thresh) {
+                                completeTable[i][j] = completeTable[i][j] > thresh ? 1 : 0;
                             }
                             if (i == 0) {
                                 features[j] = goodFeature[j][0];
@@ -317,7 +356,7 @@ if (cluster.isMaster) {
 
                     var s3 = new AWS.S3();
                     var contentType = 'text/csv';
-                    var s3Key = 'MLData/' + makeS3Key(N+(thresh?'-'+thresh:''), contentType);
+                    var s3Key = 'MLData/' + makeS3Key(N + (thresh ? '-' + thresh : ''), contentType);
                     console.log('training data key ' + s3Key);
 
                     var s3Params = {
