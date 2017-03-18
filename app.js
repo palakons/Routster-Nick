@@ -24,7 +24,7 @@ function makeS3Key(suffix, contentType) {
     return Date.now() + (suffix == '' ? '' : '-' + suffix) + '.' + contentType.substring(contentType.lastIndexOf('/') + 1, contentType.length);
 
 }
-function matchScore(itemList, myImg, thresh, n) {
+function matchScore(itemList, myImg, thresh, n,) {
     for (var i in itemList) {
         var score = 0;
         itemList[i].rekObj.M.Labels.L.sort(function (a, b) {
@@ -37,8 +37,9 @@ function matchScore(itemList, myImg, thresh, n) {
                 score += 1;
             }
         }
+        console.log(itemList[i]);
         itemList[i].score = score;
-        itemList[i].airport = nearestAP(lat, long);
+        //itemList[i].airport = nearestAP(lat, long);
         itemList[i].rekObj.M.Labels.L=itemList[i].rekObj.M.Labels.L.slice(0, score);
     }
     itemList.sort(function (a, b) {
