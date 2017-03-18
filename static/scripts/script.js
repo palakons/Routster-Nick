@@ -97,7 +97,7 @@ function callIG() {
                     "height": 150
                 },
                 "standard_resolution": {
-                    "url": "https://tpc.googlesyndication.com/simgad/6319909792632676587",
+                    "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJeASsQnKnr95B6DLSYN3IfwpnN3hmbVoGJzmZY_9wjHyf_zmK",
                     "width": 612,
                     "height": 612
                 }
