@@ -1,0 +1,1 @@
+aws rekognition detect-labels --image '{"S3Object":{"Bucket":"test-rekognition-nick","Name":"diving.jpg"}}' --region us-east-1
