@@ -80,6 +80,7 @@ function callIG() {
             "link": "http://instagr.am/p/BWrVZ/",
             "user": {
                 "username": "kevin",
+                "full_name": "Kevin Systrom",
                 "profile_picture": "http://distillery.s3.amazonaws.com/profiles/profile_3_75sq_1295574122.jpg",
                 "id": "3"
             },
@@ -123,5 +124,5 @@ function callIG() {
     }
 
     console.log('going to send this putIG...');
-    $.post(url, sample , callback);
+    $.post(url, sample, callback);
 }
