@@ -97,7 +97,7 @@ function callIG() {
                     "height": 150
                 },
                 "standard_resolution": {
-                    "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJeASsQnKnr95B6DLSYN3IfwpnN3hmbVoGJzmZY_9wjHyf_zmK",
+                    "url": "https://instagram.fkul10-1.fna.fbcdn.net/t51.2885-15/e35/16230601_1780814025572841_3618244784189079552_n.jpg",
                     "width": 612,
                     "height": 612
                 }
