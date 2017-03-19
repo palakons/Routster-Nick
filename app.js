@@ -37,7 +37,9 @@ function matchScore(itemList, myImg, thresh, n) {
         for (var j in itemList[i].rekObj.M.Labels.L) {
             if (myImg[itemList[i].rekObj.M.Labels.L[j].M.Name.S] != undefined &&
                 parseFloat(itemList[i].rekObj.M.Labels.L[j].M.Confidence.N) > thresh &&
-                myImg[itemList[i].rekObj.M.Labels.L[j].M.Name.S] > thresh) {
+                myImg[itemList[i].rekObj.M.Labels.L[j].M.Name.S] > thresh&&
+                itemList[i].rekObj.M.Labels.L[j].M.Name.S.toLowerCase() != 'person'&&
+                itemList[i].rekObj.M.Labels.L[j].M.Name.S.toLowerCase() != 'human') {
                 console.log(itemList[i].rekObj.M.Labels.L[j].M.Name.S + ' matches');
                 score += 1;
                 temp.push(itemList[i].rekObj.M.Labels.L[j]);
