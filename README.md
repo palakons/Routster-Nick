@@ -1,32 +1,60 @@
-# AWS Elastic Beanstalk Express Sample App
-This sample application uses the [Express](https://expressjs.com/) framework and [Bootstrap](http://getbootstrap.com/) to build a simple, scalable customer signup form that is deployed to [AWS Elastic Beanstalk](http://aws.amazon.com/elasticbeanstalk/). The application stores data in [Amazon DynamoDB](http://aws.amazon.com/dynamodb/) and publishes notifications to the [Amazon Simple Notification Service (SNS)](http://aws.amazon.com/sns/) when a customer fills out the form.
+# Team Routster - Airvolution 2017: Photo Matching Backends
+These codes handle backend for image matching with ones already pre-processed
+input is a url to the target image
+output will be the list of images that "match" along with name, code, and corrdinate fo teh nearest airport, sorted by matching "score"
 
-## Features
-### Themes
-The code includes several Bootstrap themes from [bootswatch.com](http://bootswatch.com/). You can dynamically change the active theme by setting the THEME environment variable in the [Elastic Beanstalk Management Console](https://console.aws.amazon.com/elasticbeanstalk):
+## make sure aws-sdk version is later than 2.11.0
+there is npm bug prevent updating
+Run `npm update aws-sdk` 
 
-![](misc/theme-flow.png)
+## Start Server
+* update region code name line 5825 in app.js
 
-Installed themes include:
+  `AWS.config.region = process.env.REGION || '<region code here>';`
+* update DynamoDB table name line 5829 in app.js
 
-* [amelia](http://bootswatch.com/amelia)
-* [default](http://bootswatch.com/default)
-* [flatly](http://bootswatch.com/flatly)
-* [slate](http://bootswatch.com/slate)
-* [united](http://bootswatch.com/united)
+  `var ddbTable = process.env.TRAINING_IMAGE_TABLE || '<DynamoDB table name here>';`
+* update S3 bucket name line 10 in app.js
 
-You can get started using the following steps:
-  1. [Install the AWS Elastic Beanstalk Command Line Interface (CLI)](http://docs.aws.amazon.com/elasticbeanstalk/latest/dg/eb-cli3-install.html).
-  2. Create an IAM Instance Profile named **aws-elasticbeanstalk-sample-role** with the policy in [iam_policy.json](iam_policy.json). For more information on how to create an IAM Instance Profile, see [Create an IAM Instance Profile for Your Amazon EC2 Instances](https://docs.aws.amazon.com/codedeploy/latest/userguide/how-to-create-iam-instance-profile.html).
-  3. Run `eb init -r <region> -p "Node.js"` to initialize the folder for use with the CLI. Replace `<region>` with a region identifier such as `us-west-2` (see [Regions and Endpoints](https://docs.amazonaws.cn/en_us/general/latest/gr/rande.html#elasticbeanstalk_region) for a full list of region identifiers). For interactive mode, run `eb init` then,
-    1. Pick a region of your choice.
-    2. Select the **[ Create New Application ]** option.
-    3. Enter the application name of your choice.
-    4. Answer **yes** to *It appears you are using Node.js. Is this correct?*.
-    7. Choose whether you want SSH access to the Amazon EC2 instances.  
-      *Note: If you choose to enable SSH and do not have an existing SSH key stored on AWS, the EB CLI requires ssh-keygen to be available on the path to generate SSH keys.*  
-  4. Run `eb create --instance_profile aws-elasticbeanstalk-sample-role` to begin the creation of your environment.
-    1. Enter the environment name of your choice.
-    2. Enter the CNAME prefix you want to use for this environment.
-  5. Once the environment creation process completes, run `eb open` to open the application in a browser.
-  6. Run `eb terminate --all` to clean up.
+  `var s3Bucket = process.env.TRAINING_IMAGE_BUCKET || '<S3 bucket name here>';`
+* Run 
+
+  `node app.js` 
+
+## Endpoints
+### Pre-processing: Put "Celeb" image into DB
+
+  POST ./putIG  
+
+```JavScript
+{
+    "data": [
+        {
+            "user": {
+                "full_name": "Lubuk Lobster"
+            },
+            "caption": {
+                "created_time": 1481376384
+            },
+            "images": {
+                "standard_resolution": {
+                    'url':'https://instagram.fkul10-1.fna.fbcdn.net/t51.2885-15/e35/12751212_1045563238837494_240075269_n.jpg'
+                }
+            },
+            "location": {
+                "name": "Lubuk Lobster",
+                "latitude": 2.996569,
+                "longitude": 101.660115
+            }
+        }
+    ]
+}
+```
+
+
+### Get similar images
+
+  GET ./igList
+  
+  parameter:
+  `url`: target image url
