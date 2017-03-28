@@ -6,10 +6,7 @@ var url = require('url');
 var extend = require('extend');
 var URL = require('url').URL;
 
-//var s3Bucket = process.env.TRAINING_IMAGE_BUCKET || 'test-rekognition-nick';
 var s3Bucket = process.env.TRAINING_IMAGE_BUCKET || 'igdara-palakons';
-
-//var ddbTable = process.env.TRAINING_IMAGE_TABLE || 'training-city-image';
 var ddbTable = process.env.TRAINING_IMAGE_TABLE || 'igdara-palakons';
 
 // Code to run if we're in the master process
@@ -29,7 +26,6 @@ if (cluster.isMaster) {
     // Code to run if we're in a worker process
 } else {
     var AWS = require('aws-sdk');
-    //var AWS = require('./aws-sdk-2.28.0.min.js');
     AWS.config.region = process.env.REGION || 'us-east-1';//'us-west-2';// 
 
     var express = require('express');
@@ -63,7 +59,7 @@ if (cluster.isMaster) {
         var items = req.body.data;
         //console.log(req.body);
         for (var i in items) {
-            console.log(new Date().toString());
+            console.log('Date: ', new Date().toString());
             //console.log(JSON.stringify(items[i],null,2));
             var toPut = {};
             toPut.created = { 'S': items[i].caption.created_time };
@@ -117,7 +113,7 @@ if (cluster.isMaster) {
                                 //var s3 = new AWS.S3({ region: 'us-east-1' });
                                 var s3 = new AWS.S3();
                                 //var s3Key = Date.now() + (items[i].url.S.lastIndexOf('.') - items[i].url.S.length >= -5 ? items[i].url.S.substring(items[i].url.S.lastIndexOf('.'), items[i].url.S.length) : '');
-                                var s3Key = 'igdara/' + makeS3Key('', contentType);
+                                var s3Key = 'images/' + makeS3Key('', contentType);
                                 console.log('fname ' + s3Key);
                                 console.log('type ' + contentType);
 
@@ -148,12 +144,12 @@ if (cluster.isMaster) {
                                         ReturnValues: "UPDATED_NEW"*/
                                         };
 
-                                        console.log("Updating the item...", params);
+                                        console.log("Updating the item with s3Key");
                                         ddb.updateItem(params, function (err, data) {
                                             if (err) {
                                                 console.error("Unable to update item. Error JSON:", JSON.stringify(err, null, 2));
                                             } else {
-                                                console.log("UpdateItem s3key succeeded:", JSON.stringify(data, null, 2));
+                                                console.log("UpdateItem s3key succeeded");
                                             }
                                         });
                                     }
@@ -202,12 +198,12 @@ if (cluster.isMaster) {
                                             }
                                         };
 
-                                        console.log("Updating the item...", params);
+                                        console.log("Updating the item with RekObj...");
                                         ddb.updateItem(params, function (err, data) {
                                             if (err) {
                                                 console.error("Unable to update item. Error JSON:", JSON.stringify(err, null, 2));
                                             } else {
-                                                console.log("UpdateItem rekObjsucceeded:", JSON.stringify(data, null, 2));
+                                                console.log("UpdateItem rekObj succeeded");
                                             }
                                         });
                                     }
@@ -240,7 +236,7 @@ if (cluster.isMaster) {
 
         ///////------
         ddb.scan(params, onScan);
-        console.log( myurl);
+        console.log(myurl);
         function onScan(err, data) {
             if (err) {
                 console.error("Unable to scan the table. Error JSON:", JSON.stringify(err, null, 2));
@@ -336,7 +332,7 @@ if (cluster.isMaster) {
                         rekognition.detectLabels(params, function (err, data) {
                             if (err) console.log(err, err.stack); // an error occurred
                             else {           // successful response
-                                console.log('Labels: ',data);
+                                console.log('Labels: ', data);
                                 var rResult = data;
                                 var reverse = {}
                                 rResult.OrientationCorrection = { 'S': rResult.OrientationCorrection };
