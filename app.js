@@ -10,7 +10,7 @@ var URL = require('url').URL;
 var s3Bucket = process.env.TRAINING_IMAGE_BUCKET || 'igdara-palakons';
 
 //var ddbTable = process.env.TRAINING_IMAGE_TABLE || 'training-city-image';
-var ddbTable = process.env.TRAINING_IMAGE_TABLE || 'igdara';
+var ddbTable = process.env.TRAINING_IMAGE_TABLE || 'igdara-palakons';
 
 // Code to run if we're in the master process
 if (cluster.isMaster) {
