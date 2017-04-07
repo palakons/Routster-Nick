@@ -105,8 +105,6 @@ if (cluster.isMaster) {
                                 }
                                 console.log('DDB Error (not continue to S3 putting): ' + err);
                                 //console.log(items[i]);
-
-                                res.status(returnStatus).json(err);
                             } else {
 
                                 //put in S3 bucket
